@@ -14,6 +14,9 @@
 #include "config/NetworkSettings.h"
 #include "gui/interface/WindowSystem.h"
 #include "input/InputManager.h"
+#include "input/emulated/VPADController.h"
+#include "input/api/Controller.h"
+#include "Cafe/HW/Latte/Core/Latte.h"
 #ifdef HAS_SDL
 #include "input/api/SDL/SDLControllerProvider.h"
 #endif
@@ -104,7 +107,7 @@ static void DeterminePaths()
 	fs::path userDataPath = ToPath(CemuCore.documentsURL);
 	fs::path cachePath = ToPath(caches);
 	// gameProfiles/ and resources/ are shipped inside the app bundle
-	fs::path dataPath = _utf8ToPath(NSBundle.mainBundle.resourcePath.fileSystemRepresentation);
+	fs::path dataPath = _utf8ToPath(NSBundle.mainBundle.resourcePath.fileSystemRepresentation) / "CemuData";
 
 	std::set<fs::path> failedWriteAccess;
 	ActiveSettings::SetPaths(false, exePath, userDataPath, userDataPath, cachePath, dataPath, failedWriteAccess);
@@ -311,6 +314,43 @@ static void SetWindowSize(CGSize size, CGFloat scale)
 + (void)setAppActive:(BOOL)active
 {
 	WindowSystem::GetWindowInfo().app_active = active;
+}
+
++ (void)setupDefaultControllerIfNeeded
+{
+	auto& inputManager = InputManager::instance();
+	auto vpad = inputManager.get_vpad_controller(0);
+	if (vpad && !vpad->get_controllers().empty())
+		return;
+#ifdef HAS_SDL
+	auto provider = inputManager.get_api_provider(InputAPI::SDLController);
+	if (!provider)
+		return;
+	auto controllers = provider->get_controllers();
+	if (controllers.empty())
+		return;
+	auto emulated = inputManager.set_controller(0, EmulatedController::Type::VPAD, controllers.front());
+	if (!emulated)
+		return;
+	emulated->set_default_mapping(controllers.front());
+	inputManager.save(0);
+	cemuLog_log(LogType::Force, "Assigned {} to the GamePad", controllers.front()->display_name());
+#endif
+}
+
++ (void)setTouchPosition:(CGPoint)position down:(BOOL)down
+{
+	auto& touch = InputManager::instance().m_main_touch;
+	std::scoped_lock lock(touch.m_mutex);
+	touch.position = {(sint32)position.x, (sint32)position.y};
+	if (down && !touch.left_down)
+		touch.left_down_toggle = true;
+	touch.left_down = down;
+}
+
++ (void)toggleGamePadScreen
+{
+	LatteGPUState.isDRCPrimary = !LatteGPUState.isDRCPrimary;
 }
 
 @end

@@ -60,7 +60,16 @@
 	label.textAlignment = NSTextAlignmentCenter;
 	label.textColor = UIColor.secondaryLabelColor;
 	label.text = @"No games found.\n\nCopy your dumped games (.wua, .wud, .wux or extracted folders) and keys.txt into the Cemu folder using the Files app or Finder, or add a folder with the button above.";
-	self.tableView.backgroundView = label;
+	UIView* container = [UIView new];
+	label.translatesAutoresizingMaskIntoConstraints = NO;
+	[container addSubview:label];
+	[NSLayoutConstraint activateConstraints:@[
+		[label.centerYAnchor constraintEqualToAnchor:container.centerYAnchor],
+		[label.centerXAnchor constraintEqualToAnchor:container.centerXAnchor],
+		[label.widthAnchor constraintLessThanOrEqualToConstant:520],
+		[label.leadingAnchor constraintGreaterThanOrEqualToAnchor:container.layoutMarginsGuide.leadingAnchor],
+	]];
+	self.tableView.backgroundView = container;
 }
 
 - (void)refresh

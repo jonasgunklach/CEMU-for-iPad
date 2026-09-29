@@ -3,6 +3,13 @@
 set(CEMU_IOS_BUNDLE_ID "info.cemu.Cemu.ios" CACHE STRING "Bundle identifier of the iPadOS app")
 set(CEMU_IOS_DEVELOPMENT_TEAM "" CACHE STRING "Apple development team ID used for code signing")
 
+if (CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+	set(CEMU_IOS_PLATFORM_NAME "iPhoneSimulator")
+else()
+	set(CEMU_IOS_PLATFORM_NAME "iPhoneOS")
+endif()
+string(TOLOWER "${CEMU_IOS_PLATFORM_NAME}" CEMU_IOS_PLATFORM_NAME_LOWER)
+
 add_executable(CemuiOS MACOSX_BUNDLE
 	main.mm
 	CemuAppDelegate.h
@@ -24,10 +31,11 @@ cemu_use_precompiled_header(CemuiOS)
 set_source_files_properties(main.mm CemuAppDelegate.mm CemuCore.mm EmulationViewController.mm GameListViewController.mm IOSWindowSystem.mm
 	PROPERTIES SKIP_PRECOMPILE_HEADERS ON COMPILE_OPTIONS "-fobjc-arc")
 
-# game profiles and resources are looked up relative to the bundle's resource path
+# game profiles and resources are the data path (see CemuCore.mm). They must not sit at the bundle root:
+# a top level "resources" folder makes CFBundle treat the app as an old-style bundle without Info.plist
 foreach(folder gameProfiles resources)
 	add_custom_command(TARGET CemuiOS POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/bin/${folder}" "$<TARGET_BUNDLE_CONTENT_DIR:CemuiOS>/${folder}")
+		COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/bin/${folder}" "$<TARGET_BUNDLE_CONTENT_DIR:CemuiOS>/CemuData/${folder}")
 endforeach()
 
 set_target_properties(CemuiOS PROPERTIES

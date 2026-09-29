@@ -41,6 +41,13 @@ NS_ASSUME_NONNULL_BEGIN
 // called by the frontend on scenePhase changes
 + (void)setAppActive:(BOOL)active;
 
+// assigns the first connected game controller to the GamePad if nothing is configured yet
++ (void)setupDefaultControllerIfNeeded;
+// touches on the main screen are forwarded as GamePad touchscreen input (position in pixels)
++ (void)setTouchPosition:(CGPoint)position down:(BOOL)down;
+// swaps between TV and GamePad image on the main screen
++ (void)toggleGamePadScreen;
+
 @end
 
 NS_ASSUME_NONNULL_END
