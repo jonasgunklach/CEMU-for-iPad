@@ -410,7 +410,7 @@ struct CemuConfig
 	ConfigValue<std::string> proxy_server{};
 
 	// temporary workaround because feature crashes on macOS
-#if BOOST_OS_MACOS
+#if BOOST_OS_MACOS || BOOST_OS_IOS
 #define DISABLE_SCREENSAVER_DEFAULT false
 #else
 #define DISABLE_SCREENSAVER_DEFAULT true

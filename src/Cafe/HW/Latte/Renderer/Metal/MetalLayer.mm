@@ -1,5 +1,25 @@
 #include "Cafe/HW/Latte/Renderer/Metal/MetalLayer.h"
 
+#if CEMU_IOS
+
+#import <QuartzCore/CAMetalLayer.h>
+
+// On iPadOS the UIKit frontend owns the view hierarchy and creates the CAMetalLayer on the main thread.
+// WindowHandleInfo::surface points directly at that layer.
+void* CreateMetalLayer(void* handle, float& scaleX, float& scaleY)
+{
+	CAMetalLayer* layer = (__bridge CAMetalLayer*)handle;
+
+	scaleX = (float)layer.contentsScale;
+	scaleY = (float)layer.contentsScale;
+
+	// balanced by the release in ~MetalLayerHandle
+	CFRetain((__bridge CFTypeRef)layer);
+	return (__bridge void*)layer;
+}
+
+#else
+
 #include "Cafe/HW/Latte/Renderer/MetalView.h"
 
 void* CreateMetalLayer(void* handle, float& scaleX, float& scaleY)
@@ -20,3 +40,5 @@ void* CreateMetalLayer(void* handle, float& scaleX, float& scaleY)
 
 	return childView.layer;
 }
+
+#endif

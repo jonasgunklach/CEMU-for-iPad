@@ -64,6 +64,12 @@ add_subdirectory(util)
 add_subdirectory(imgui)
 add_subdirectory(resource)
 
+if (CEMU_IOS)
+	# the iPadOS app bundle is defined separately
+	add_subdirectory(ios)
+	return()
+endif()
+
 add_executable(CemuBin
 	main.cpp
 	mainLLE.cpp

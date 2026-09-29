@@ -38,7 +38,7 @@
 #if BOOST_OS_LINUX
 #define _putenv(__s) putenv((char*)(__s))
 #include <sys/sysinfo.h>
-#elif BOOST_OS_MACOS || BOOST_OS_BSD
+#elif BOOST_OS_MACOS || BOOST_OS_IOS || BOOST_OS_BSD
 #define _putenv(__s) putenv((char*)(__s))
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -247,7 +247,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-#else
+#elif !defined(CEMU_IOS) // on iPadOS the entrypoint is in src/ios/main.mm
 
 int BreathOfTheWildChildProcessMain();
 int main(int argc, char *argv[])

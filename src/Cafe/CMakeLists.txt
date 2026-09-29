@@ -548,7 +548,7 @@ if (ENABLE_VULKAN)
   )
 endif()
 
-if(APPLE)
+if(APPLE AND NOT CEMU_IOS)
 	target_sources(CemuCafe PRIVATE
 	    HW/Latte/Renderer/MetalView.mm
 	    HW/Latte/Renderer/MetalView.h

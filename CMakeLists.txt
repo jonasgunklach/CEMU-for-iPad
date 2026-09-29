@@ -4,6 +4,11 @@ option(ENABLE_VCPKG "Enable the vcpkg package manager" ON)
 option(MACOS_BUNDLE "The executable when built on macOS will be created as an application bundle" OFF)
 option(ALLOW_PORTABLE "Allow Cemu to be run in portable mode" ON)
 
+# iPadOS port: configure with -DCMAKE_SYSTEM_NAME=iOS
+if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
+	set(CEMU_IOS ON)
+endif()
+
 # used by CI script to set version:
 set(EMULATOR_VERSION_MAJOR "0" CACHE STRING "")
 set(EMULATOR_VERSION_MINOR "0" CACHE STRING "")
@@ -40,6 +45,10 @@ if (ENABLE_VCPKG)
 
 	if(UNIX AND NOT APPLE)
 		set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg_overlay_ports_linux;${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg_overlay_ports")
+	elseif(CEMU_IOS)
+		set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg_overlay_ports")
+		set(VCPKG_OVERLAY_TRIPLETS "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg_triplets")
+		set(VCPKG_TARGET_TRIPLET "arm64-ios-cemu" CACHE STRING "")
 	elseif(APPLE)
 		set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg_overlay_ports_mac;${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg_overlay_ports")
 	else()
@@ -99,7 +108,12 @@ endif()
 
 if (APPLE)
     enable_language(OBJC OBJCXX)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.4")
+    if (CEMU_IOS)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "17.0")
+        add_compile_definitions(CEMU_IOS)
+    else()
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "13.4")
+    endif()
 endif()
 
 if (UNIX AND NOT APPLE)
@@ -114,6 +128,20 @@ if (APPLE)
 else()
     set(ENABLE_METAL_DEFAULT OFF)
 	set(ENABLE_OPENGL_DEFAULT ON)
+endif()
+
+if (CEMU_IOS)
+	# only Metal is available on iPadOS; wxWidgets is replaced by the native UIKit frontend in src/ios
+	set(ENABLE_OPENGL OFF)
+	set(ENABLE_VULKAN OFF)
+	set(ENABLE_DISCORD_RPC OFF)
+	set(ENABLE_HIDAPI OFF)
+	set(ENABLE_LIBUSB OFF)
+	set(ENABLE_WXWIDGETS OFF)
+	# cubeb's AudioUnit backend uses the macOS-only AudioHardware API
+	set(ENABLE_CUBEB OFF)
+	# CMake defaults every executable to a bundle on iOS; only the app target (src/ios) should be one
+	set(CMAKE_MACOSX_BUNDLE OFF)
 endif()
 
 option(ENABLE_OPENGL "Enables the OpenGL backend" ${ENABLE_OPENGL_DEFAULT})

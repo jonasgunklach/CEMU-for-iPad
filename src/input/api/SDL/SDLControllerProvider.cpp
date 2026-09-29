@@ -16,7 +16,7 @@ struct SDL_JoystickGUIDHash
 
 SDLControllerProvider::SDLControllerProvider()
 {
-#if !BOOST_OS_MACOS
+#if !(BOOST_OS_MACOS || BOOST_OS_IOS)
 	std::scoped_lock _l(s_mutex);
 	if (s_initCount.fetch_add(1) == 0)
 	{
@@ -28,7 +28,7 @@ SDLControllerProvider::SDLControllerProvider()
 
 SDLControllerProvider::~SDLControllerProvider()
 {
-#if !BOOST_OS_MACOS
+#if !(BOOST_OS_MACOS || BOOST_OS_IOS)
 	bool shutdownSDL = false;
 	{
 		std::scoped_lock _l(s_mutex);
@@ -144,7 +144,7 @@ void SDLControllerProvider::ShutdownSDL()
 	SDL_QuitSubSystem(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC);
 }
 
-#if BOOST_OS_MACOS
+#if BOOST_OS_MACOS || BOOST_OS_IOS
 void SDLControllerProvider::PumpSDLEvents()
 {
 	SDL_Event event;
@@ -285,7 +285,7 @@ void SDLControllerProvider::HandleSDLEvent(SDL_Event& event)
 
 void SDLControllerProvider::event_thread()
 {
-#if BOOST_OS_MACOS
+#if BOOST_OS_MACOS || BOOST_OS_IOS
 	cemu_assert(false);
 #endif
 	SetThreadName("SDL_events");

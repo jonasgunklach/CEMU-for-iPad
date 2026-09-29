@@ -44,7 +44,8 @@
       "default-features": false,
       "features": [
         "debug-support"
-      ]
+      ],
+      "platform": "!ios"
     },
     "openssl",
     {
@@ -65,9 +66,13 @@
       "features": [
         "jpeg",
         "zip"
-      ]
+      ],
+      "platform": "!ios"
     },
-    "libusb"
+    {
+      "name": "libusb",
+      "platform": "!ios"
+    }
   ],
   "overrides": [
     {

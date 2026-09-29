@@ -25,7 +25,7 @@ public:
 	MotionSample motion_sample(SDL_JoystickID diid);
 
 	// exposed for manual event handling on macOS
-#if BOOST_OS_MACOS
+#if BOOST_OS_MACOS || BOOST_OS_IOS
 	static void InitSDL();
 	static void ShutdownSDL();
 	static void PumpSDLEvents();
@@ -34,7 +34,7 @@ public:
 private:
 	void event_thread();
 	static void HandleSDLEvent(union SDL_Event& event);
-#if !BOOST_OS_MACOS
+#if !(BOOST_OS_MACOS || BOOST_OS_IOS)
 	static void InitSDL();
 	static void ShutdownSDL();
 #endif
