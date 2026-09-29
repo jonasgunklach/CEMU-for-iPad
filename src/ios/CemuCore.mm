@@ -1,4 +1,5 @@
 #import "CemuCore.h"
+#import <AVFoundation/AVFoundation.h>
 
 // Objective-C++ sources do not use the precompiled header
 #include "Common/precompiled.h"
@@ -14,6 +15,7 @@
 #include "config/NetworkSettings.h"
 #include "gui/interface/WindowSystem.h"
 #include "input/InputManager.h"
+#include "audio/IAudioAPI.h"
 #include "input/emulated/VPADController.h"
 #include "input/api/Controller.h"
 #include "Cafe/HW/Latte/Core/Latte.h"
@@ -159,6 +161,14 @@ static void DeterminePaths()
 	}
 	else
 		GetConfigHandle().Load();
+	// CoreAudio is the only audio backend on iPadOS. Persist it since CemuCommonInit() reloads settings.xml
+	if (GetConfig().audio_api != IAudioAPI::CoreAudio)
+	{
+		GetConfig().audio_api = IAudioAPI::CoreAudio;
+		GetConfigHandle().Save();
+	}
+	[AVAudioSession.sharedInstance setCategory:AVAudioSessionCategoryPlayback mode:AVAudioSessionModeDefault options:AVAudioSessionCategoryOptionMixWithOthers error:nil];
+	[AVAudioSession.sharedInstance setActive:YES error:nil];
 
 	if (!CreateDefaultMLCFiles(ActiveSettings::GetMlcPath()))
 		WindowSystem::ShowErrorDialog("Cemu failed to create the mlc directory.", "Error");

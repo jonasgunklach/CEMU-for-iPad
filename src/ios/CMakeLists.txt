@@ -71,4 +71,5 @@ target_link_libraries(CemuiOS PRIVATE
 	"-framework QuartzCore"
 	"-framework UniformTypeIdentifiers"
 	"-framework GameController"
+	"-framework AVFoundation"
 )

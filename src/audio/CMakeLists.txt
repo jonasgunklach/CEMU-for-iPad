@@ -30,6 +30,14 @@ if(ENABLE_CUBEB)
 	#add_compile_definitions(HAS_CUBEB)
 endif()
 
+if(CEMU_IOS)
+	target_sources(CemuAudio PRIVATE
+		CoreAudioAPI.cpp
+		CoreAudioAPI.h
+	)
+	target_link_libraries(CemuAudio PRIVATE "-framework AudioToolbox")
+endif()
+
 target_include_directories(CemuAudio PUBLIC "../")
 
 target_link_libraries(CemuAudio PRIVATE
