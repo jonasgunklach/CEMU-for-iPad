@@ -18,6 +18,8 @@
 	self.titles = @[];
 	[self.tableView registerClass:UITableViewCell.class forCellReuseIdentifier:@"title"];
 
+	self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"JIT" style:UIBarButtonItemStylePlain target:self action:@selector(showJITStatus)];
+
 	self.navigationItem.rightBarButtonItems = @[
 		[[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"folder.badge.plus"] style:UIBarButtonItemStylePlain target:self action:@selector(addFolder)],
 		[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh target:self action:@selector(refresh)],
@@ -32,10 +34,47 @@
 
 	[NSNotificationCenter.defaultCenter addObserver:self selector:@selector(reloadTitles) name:@"CemuRefreshGameList" object:nil];
 
+	[NSNotificationCenter.defaultCenter addObserver:self selector:@selector(appDidBecomeActive) name:UIApplicationDidBecomeActiveNotification object:nil];
+
 	[CemuCore initializeWithCompletion:^{
 		[self.spinner stopAnimating];
 		[self reloadTitles];
+		[self updateJITButton];
 	}];
+}
+
+- (void)appDidBecomeActive
+{
+	// StikDebug may have attached while we were in the background
+	if (CemuCore.isInitialized && !CemuCore.isJITEnabled && [CemuCore tryEnableJIT])
+		[self updateJITButton];
+}
+
+- (void)updateJITButton
+{
+	UIBarButtonItem* item = self.navigationItem.leftBarButtonItem;
+	item.image = [UIImage systemImageNamed:CemuCore.isJITEnabled ? @"bolt.fill" : @"bolt.slash"];
+	item.tintColor = CemuCore.isJITEnabled ? UIColor.systemGreenColor : UIColor.systemOrangeColor;
+}
+
+- (void)showJITStatus
+{
+	if (CemuCore.isJITEnabled)
+	{
+		[self showMessage:@"JIT is enabled. Games will use the recompiler." title:@"JIT"];
+		return;
+	}
+	NSString* message = [NSString stringWithFormat:@"%@.\n\nWithout JIT games run in the interpreter, which is too slow to be playable. Enable JIT with StikDebug, then come back to Cemu.", CemuCore.jitStatus];
+	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"JIT not enabled" message:message preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Open StikDebug" style:UIAlertActionStyleDefault handler:^(UIAlertAction*) {
+		[CemuCore requestJITFromStikDebug];
+	}]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Retry" style:UIAlertActionStyleDefault handler:^(UIAlertAction*) {
+		[CemuCore tryEnableJIT];
+		[self updateJITButton];
+	}]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+	[self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)reloadTitles
@@ -135,7 +174,12 @@
 
 - (void)showError:(NSString*)message
 {
-	UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Error" message:message preferredStyle:UIAlertControllerStyleAlert];
+	[self showMessage:message title:@"Error"];
+}
+
+- (void)showMessage:(NSString*)message title:(NSString*)title
+{
+	UIAlertController* alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
 	[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
 	[self presentViewController:alert animated:YES completion:nil];
 }

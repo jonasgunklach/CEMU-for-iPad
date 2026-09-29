@@ -11,6 +11,9 @@
 #include "../PPCRecompiler.h"
 #include "Common/precompiled.h"
 #include "Common/cpu_features.h"
+#if BOOST_OS_IOS
+#include "util/MemMapper/JitMemory.h"
+#endif
 #include "HW/Espresso/Interpreter/PPCInterpreterInternal.h"
 #include "HW/Espresso/Interpreter/PPCInterpreterHelper.h"
 #include "HW/Espresso/PPCState.h"
@@ -93,7 +96,12 @@ class AArch64Allocator : public Allocator
 
 	[[nodiscard]] bool useProtect() const override
 	{
+#if BOOST_OS_IOS
+		// code is generated in ordinary memory and then copied into the dual-mapped JIT pool
+		return false;
+#else
 		return !m_freeDisabled && m_allocatorImpl->useProtect();
+#endif
 	}
 };
 
@@ -1611,6 +1619,16 @@ bool PPCRecompiler_generateAArch64Code(struct PPCRecFunction_t* PPCRecFunction, 
 	}
 	aarch64GenContext.setSize(codeSize);
 
+#if BOOST_OS_IOS
+	// resolve labels, then move the position independent code into executable memory
+	aarch64GenContext.ready(CodeArray::PROTECT_RW);
+	void* executableCode = JitMemory::CommitCode(aarch64GenContext.getCode(), codeSize);
+	if (!executableCode)
+		return false;
+	PPCRecFunction->x86Code = executableCode;
+	PPCRecFunction->x86Size = codeSize;
+	// the temporary buffer is released by the CodeGenerator destructor
+#else
 	aarch64GenContext.readyRE();
 
 	// set code
@@ -1618,11 +1636,16 @@ bool PPCRecompiler_generateAArch64Code(struct PPCRecFunction_t* PPCRecFunction, 
 	PPCRecFunction->x86Size = aarch64GenContext.getMaxSize();
 	// set free disabled to skip freeing the code from the CodeGenerator destructor
 	allocator.setFreeDisabled(true);
+#endif
 	return true;
 }
 
 void PPCRecompiler_cleanupAArch64Code(void* code, size_t size)
 {
+#if BOOST_OS_IOS
+	JitMemory::FreeCode(code, size);
+	return;
+#endif
 	AArch64Allocator allocator;
 	if (allocator.useProtect())
 		CodeArray::protect(code, size, CodeArray::PROTECT_RW);
@@ -1672,6 +1695,18 @@ void AArch64GenContext_t::leaveRecompilerCode()
 	ret();
 }
 
+template<typename T>
+static T finalizeInterfaceFunction(AArch64GenContext_t& ctx)
+{
+#if BOOST_OS_IOS
+	ctx.ready(CodeArray::PROTECT_RW);
+	return reinterpret_cast<T>(JitMemory::CommitCode(ctx.getCode(), ctx.getSize()));
+#else
+	ctx.readyRE();
+	return ctx.getCode<T>();
+#endif
+}
+
 bool initializedInterfaceFunctions = false;
 AArch64GenContext_t enterRecompilerCode_ctx{};
 
@@ -1684,14 +1719,11 @@ void PPCRecompilerAArch64Gen_generateRecompilerInterfaceFunctions()
 	initializedInterfaceFunctions = true;
 
 	enterRecompilerCode_ctx.enterRecompilerCode();
-	enterRecompilerCode_ctx.readyRE();
-	PPCRecompiler_enterRecompilerCode = enterRecompilerCode_ctx.getCode<decltype(PPCRecompiler_enterRecompilerCode)>();
+	PPCRecompiler_enterRecompilerCode = finalizeInterfaceFunction<decltype(PPCRecompiler_enterRecompilerCode)>(enterRecompilerCode_ctx);
 
 	leaveRecompilerCode_unvisited_ctx.leaveRecompilerCode();
-	leaveRecompilerCode_unvisited_ctx.readyRE();
-	PPCRecompiler_leaveRecompilerCode_unvisited = leaveRecompilerCode_unvisited_ctx.getCode<decltype(PPCRecompiler_leaveRecompilerCode_unvisited)>();
+	PPCRecompiler_leaveRecompilerCode_unvisited = finalizeInterfaceFunction<decltype(PPCRecompiler_leaveRecompilerCode_unvisited)>(leaveRecompilerCode_unvisited_ctx);
 
 	leaveRecompilerCode_visited_ctx.leaveRecompilerCode();
-	leaveRecompilerCode_visited_ctx.readyRE();
-	PPCRecompiler_leaveRecompilerCode_visited = leaveRecompilerCode_visited_ctx.getCode<decltype(PPCRecompiler_leaveRecompilerCode_visited)>();
+	PPCRecompiler_leaveRecompilerCode_visited = finalizeInterfaceFunction<decltype(PPCRecompiler_leaveRecompilerCode_visited)>(leaveRecompilerCode_visited_ctx);
 }

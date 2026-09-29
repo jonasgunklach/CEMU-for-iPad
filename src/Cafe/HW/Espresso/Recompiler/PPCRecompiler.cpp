@@ -1,4 +1,7 @@
 #include "Cafe/HW/Espresso/Interpreter/PPCInterpreterInternal.h"
+#if BOOST_OS_IOS
+#include "util/MemMapper/JitMemory.h"
+#endif
 #include "PPCFunctionBoundaryTracker.h"
 #include "PPCRecompiler.h"
 #include "PPCRecompilerIml.h"
@@ -673,6 +676,13 @@ void PPCRecompiler_init()
 		cemuLog_log(LogType::Force, "Recompiler disabled. Command line --force-interpreter or force-multicore-interpreter was passed");
 		return;
 	}
+#if BOOST_OS_IOS
+	if (!JitMemory::IsEnabled())
+	{
+		cemuLog_log(LogType::Force, "Recompiler disabled: {}. Falling back to the interpreter", JitMemory::GetLastError());
+		return;
+	}
+#endif
 	if (ppcRecompilerInstanceData)
 	{
 		MemMapper::FreeReservation(ppcRecompilerInstanceData, sizeof(PPCRecompilerInstanceData_t));

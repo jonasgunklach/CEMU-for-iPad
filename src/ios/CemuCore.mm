@@ -1,5 +1,6 @@
 #import "CemuCore.h"
 #import <AVFoundation/AVFoundation.h>
+#import <UIKit/UIKit.h>
 
 // Objective-C++ sources do not use the precompiled header
 #include "Common/precompiled.h"
@@ -15,6 +16,7 @@
 #include "config/NetworkSettings.h"
 #include "gui/interface/WindowSystem.h"
 #include "input/InputManager.h"
+#include "util/MemMapper/JitMemory.h"
 #include "audio/IAudioAPI.h"
 #include "input/emulated/VPADController.h"
 #include "input/api/Controller.h"
@@ -143,6 +145,8 @@ static void DeterminePaths()
 	}
 
 	SetThreadName("MainThread_UI");
+	// claim a low address range for the JIT before the 4GB guest address space gets reserved
+	JitMemory::ReserveAddressRange();
 	// security-scoped folders must be re-opened before the first title scan
 	[self restoreGameFolderAccess];
 	DeterminePaths();
@@ -175,6 +179,7 @@ static void DeterminePaths()
 
 	ActiveSettings::Init();
 	LatteOverlay_init();
+	[self tryEnableJIT];
 
 #ifdef HAS_SDL
 	// like on macOS, SDL events are pumped from the main thread
@@ -324,6 +329,54 @@ static void SetWindowSize(CGSize size, CGFloat scale)
 + (void)setAppActive:(BOOL)active
 {
 	WindowSystem::GetWindowInfo().app_active = active;
+}
+
++ (NSURL*)jitCrashMarkerURL
+{
+	return [self.documentsURL URLByAppendingPathComponent:@".jit_enable_in_progress"];
+}
+
++ (BOOL)isJITEnabled
+{
+	return JitMemory::IsEnabled();
+}
+
++ (NSString*)jitStatus
+{
+	if (JitMemory::IsEnabled())
+		return @"JIT enabled";
+	return [NSString stringWithUTF8String:JitMemory::GetLastError()];
+}
+
++ (BOOL)tryEnableJIT
+{
+	if (JitMemory::IsEnabled())
+		return YES;
+	if (CafeSystem::IsTitleRunning())
+		return NO; // the recompiler is only initialized on game launch
+	NSFileManager* fm = NSFileManager.defaultManager;
+	NSString* marker = self.jitCrashMarkerURL.path;
+	if ([fm fileExistsAtPath:marker])
+	{
+		// the previous attempt crashed the app (e.g. TXM device without StikDebug's script). Skip it once
+		[fm removeItemAtPath:marker error:nil];
+		cemuLog_log(LogType::Force, "JIT: skipping because enabling it crashed on the previous launch");
+		return NO;
+	}
+	if (!JitMemory::IsDebuggerAttached())
+		return JitMemory::Enable(); // fails quickly, but sets the error message
+	[fm createFileAtPath:marker contents:nil attributes:nil];
+	const bool enabled = JitMemory::Enable();
+	[fm removeItemAtPath:marker error:nil];
+	if (!enabled)
+		cemuLog_log(LogType::Force, "JIT: {}", JitMemory::GetLastError());
+	return enabled;
+}
+
++ (void)requestJITFromStikDebug
+{
+	NSString* url = [NSString stringWithFormat:@"stikdebug://enable-jit?bundle-id=%@&pid=%d", NSBundle.mainBundle.bundleIdentifier, getpid()];
+	[UIApplication.sharedApplication openURL:[NSURL URLWithString:url] options:@{} completionHandler:nil];
 }
 
 + (void)setupDefaultControllerIfNeeded

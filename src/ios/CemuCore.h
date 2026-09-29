@@ -41,6 +41,14 @@ NS_ASSUME_NONNULL_BEGIN
 // called by the frontend on scenePhase changes
 + (void)setAppActive:(BOOL)active;
 
+// JIT (recompiler) support. Without JIT Cemu runs the much slower interpreter
+@property(class, nonatomic, readonly) BOOL isJITEnabled;
+@property(class, nonatomic, readonly) NSString* jitStatus;
+// tries to enable JIT now (e.g. after StikDebug attached). Returns YES on success
++ (BOOL)tryEnableJIT;
+// asks StikDebug to attach to this process
++ (void)requestJITFromStikDebug;
+
 // assigns the first connected game controller to the GamePad if nothing is configured yet
 + (void)setupDefaultControllerIfNeeded;
 // touches on the main screen are forwarded as GamePad touchscreen input (position in pixels)

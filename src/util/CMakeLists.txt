@@ -89,6 +89,13 @@ endif()
 
 set_property(TARGET CemuUtil PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+if(CEMU_IOS)
+	target_sources(CemuUtil PRIVATE
+		MemMapper/JitMemory.h
+		MemMapper/JitMemory_iOS.cpp
+	)
+endif()
+
 cemu_use_precompiled_header(CemuUtil)
 
 if (ENABLE_LIBUSB)
