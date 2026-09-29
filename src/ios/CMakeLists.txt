@@ -50,6 +50,9 @@ set_target_properties(CemuiOS PROPERTIES
 	XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS "${CMAKE_CURRENT_SOURCE_DIR}/Cemu.entitlements"
 	XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Automatic"
 	XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${CEMU_IOS_DEVELOPMENT_TEAM}"
+	# unoptimized builds are far too slow to run games, so Run in Xcode uses the optimized configuration
+	XCODE_GENERATE_SCHEME ON
+	XCODE_SCHEME_LAUNCH_CONFIGURATION "RelWithDebInfo"
 )
 
 if(ENABLE_SDL)

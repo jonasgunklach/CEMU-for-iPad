@@ -38,6 +38,11 @@ void LatteDraw_handleSpecialState8_clearAsDepth();
 
 std::vector<MetalRenderer::DeviceInfo> MetalRenderer::GetDevices()
 {
+#if BOOST_OS_IOS
+    // iPads have a single GPU and MTLCopyAllDevices() requires iPadOS 18
+    NS_STACK_SCOPED auto device = MTL::CreateSystemDefaultDevice();
+    return {{std::string(device->name()->utf8String()), device->registryID()}};
+#endif
     NS_STACK_SCOPED auto devices = MTL::CopyAllDevices();
     std::vector<MetalRenderer::DeviceInfo> result;
     result.reserve(devices->count());
@@ -123,7 +128,11 @@ MetalRenderer::MetalRenderer() : Renderer(RendererAPI::Metal)
 
     // Pick a device
     auto& config = GetConfig();
+#if BOOST_OS_IOS
+    const bool hasDeviceSet = false;
+#else
     const bool hasDeviceSet = config.mtl_graphic_device_uuid != 0;
+#endif
 
     // If a device is set, try to find it
     if (hasDeviceSet)
