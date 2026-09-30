@@ -40,7 +40,26 @@
 		[self.spinner stopAnimating];
 		[self reloadTitles];
 		[self updateJITButton];
+		[self autoLaunchIfRequested];
 	}];
+}
+
+// launch argument "-CemuAutoLaunch <title id in hex>" starts a game directly (used for testing)
+- (void)autoLaunchIfRequested
+{
+	NSString* titleIdString = [NSUserDefaults.standardUserDefaults stringForKey:@"CemuAutoLaunch"];
+	if (titleIdString.length == 0)
+		return;
+	uint64_t titleId = strtoull(titleIdString.UTF8String, nullptr, 16);
+	for (CemuTitle* title in self.titles)
+	{
+		if (title.titleId == titleId)
+		{
+			[self launchTitle:title];
+			return;
+		}
+	}
+	[self showError:[NSString stringWithFormat:@"Title %@ not found", titleIdString]];
 }
 
 - (void)appDidBecomeActive
@@ -160,7 +179,11 @@
 		[self showError:@"A game is already running. Restart Cemu to launch another game."];
 		return;
 	}
-	CemuTitle* title = self.titles[indexPath.row];
+	[self launchTitle:self.titles[indexPath.row]];
+}
+
+- (void)launchTitle:(CemuTitle*)title
+{
 	NSString* error = [CemuCore prepareTitle:title];
 	if (error)
 	{

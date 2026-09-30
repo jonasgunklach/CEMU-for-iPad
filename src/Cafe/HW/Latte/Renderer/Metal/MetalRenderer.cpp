@@ -178,7 +178,12 @@ MetalRenderer::MetalRenderer() : Renderer(RendererAPI::Metal)
     // Feature support
     m_isAppleGPU = m_device->supportsFamily(MTL::GPUFamilyApple1);
     m_supportsFramebufferFetch = GetConfig().framebuffer_fetch.GetValue() ? m_device->supportsFamily(MTL::GPUFamilyApple2) : false;
+#if BOOST_OS_IOS
+    // MTLStorageModeManaged does not exist on iOS. The simulator's Metal device may report no unified memory
+    m_hasUnifiedMemory = true;
+#else
     m_hasUnifiedMemory = m_device->hasUnifiedMemory();
+#endif
     m_supportsMetal3 = m_device->supportsFamily(MTL::GPUFamilyMetal3);
     m_supportsMeshShaders = (m_supportsMetal3 && (m_vendor != GfxVendor::Intel || GetConfig().force_mesh_shaders.GetValue())); // Intel GPUs have issues with mesh shaders
     m_recommendedMaxVRAMUsage = m_device->recommendedMaxWorkingSetSize();
@@ -272,8 +277,11 @@ MetalRenderer::MetalRenderer() : Renderer(RendererAPI::Metal)
     m_copyDepthToColorDesc->setFragmentFunction(fragmentCopyDepthToColorFunction);
 
     // Void vertex pipelines
+    // currently unused (see CopyBufferToBuffer). iOS Metal rejects render pipelines without any attachment format
+#if !BOOST_OS_IOS
     if (m_isAppleGPU)
         m_copyBufferToBufferPipeline = new MetalVoidVertexPipeline(this, utilityLibrary, "vertexCopyBufferToBuffer");
+#endif
 
     // HACK: for some reason, this variable ends up being initialized to some garbage data, even though its declared as bool m_captureFrame = false;
     m_occlusionQuery.m_lastCommandBuffer = nullptr;
@@ -282,8 +290,7 @@ MetalRenderer::MetalRenderer() : Renderer(RendererAPI::Metal)
 
 MetalRenderer::~MetalRenderer()
 {
-    if (m_isAppleGPU)
-        delete m_copyBufferToBufferPipeline;
+    delete m_copyBufferToBufferPipeline;
     //delete m_copyTextureToTexturePipeline;
     //delete m_restrideBufferPipeline;
 

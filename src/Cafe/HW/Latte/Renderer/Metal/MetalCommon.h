@@ -11,6 +11,7 @@ struct MetalPixelFormatSupport
 	bool m_supportsRG8Unorm_sRGB;
 	bool m_supportsPacked16BitFormats;
 	bool m_supportsDepth24Unorm_Stencil8;
+	bool m_supportsBCTextureCompression;
 
 	MetalPixelFormatSupport() = default;
 	MetalPixelFormatSupport(MTL::Device* device)
@@ -19,6 +20,8 @@ struct MetalPixelFormatSupport
         m_supportsRG8Unorm_sRGB = device->supportsFamily(MTL::GPUFamilyApple1);
         m_supportsPacked16BitFormats = device->supportsFamily(MTL::GPUFamilyApple1);
         m_supportsDepth24Unorm_Stencil8 = device->depth24Stencil8PixelFormatSupported();
+        // BC formats are always available on macOS. On iOS they require an Apple silicon iPad and are missing in the simulator
+        m_supportsBCTextureCompression = device->supportsBCTextureCompression();
 	}
 };
 

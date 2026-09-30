@@ -168,6 +168,29 @@ void CheckForPixelFormatSupport(const MetalPixelFormatSupport& support)
         MTL_COLOR_FORMAT_TABLE[Latte::E_GX2SURFFMT::R5_G5_B5_A1_UNORM].textureDecoder = TextureDecoder_R5_G5_B5_A1_UNORM_swappedRB_To_RGBA8::getInstance();
     }
 
+    if (!support.m_supportsBCTextureCompression)
+    {
+        // decode BC textures on the CPU
+        auto useUncompressed = [](Latte::E_GX2SURFFMT format, MTL::PixelFormat pixelFormat, size_t bytesPerTexel, TextureDecoder* decoder) {
+            auto& info = MTL_COLOR_FORMAT_TABLE[format];
+            info.pixelFormat = pixelFormat;
+            info.bytesPerBlock = bytesPerTexel;
+            info.blockTexelSize = {1, 1};
+            info.textureDecoder = decoder;
+            info.isAlternateFormat = true;
+        };
+        useUncompressed(Latte::E_GX2SURFFMT::BC1_UNORM, MTL::PixelFormatRGBA32Float, 16, TextureDecoder_BC1_UNORM_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC1_SRGB, MTL::PixelFormatRGBA32Float, 16, TextureDecoder_BC1_SRGB_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC2_UNORM, MTL::PixelFormatRGBA32Float, 16, TextureDecoder_BC2_UNORM_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC2_SRGB, MTL::PixelFormatRGBA32Float, 16, TextureDecoder_BC2_SRGB_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC3_UNORM, MTL::PixelFormatRGBA32Float, 16, TextureDecoder_BC3_UNORM_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC3_SRGB, MTL::PixelFormatRGBA32Float, 16, TextureDecoder_BC3_SRGB_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC4_UNORM, MTL::PixelFormatRG32Float, 8, TextureDecoder_BC4_UNORM_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC4_SNORM, MTL::PixelFormatRG32Float, 8, TextureDecoder_BC4_UNORM_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC5_UNORM, MTL::PixelFormatRG32Float, 8, TextureDecoder_BC5_UNORM_uncompress::getInstance());
+        useUncompressed(Latte::E_GX2SURFFMT::BC5_SNORM, MTL::PixelFormatRG32Float, 8, TextureDecoder_BC5_SNORM_uncompress::getInstance());
+    }
+
     // Depth
    	MTL_DEPTH_FORMAT_TABLE[Latte::E_GX2SURFFMT::D24_S8_UNORM].textureDecoder = TextureDecoder_D24_S8::getInstance();
    	MTL_DEPTH_FORMAT_TABLE[Latte::E_GX2SURFFMT::D24_S8_FLOAT].textureDecoder = TextureDecoder_NullData64::getInstance(); // TODO: why?

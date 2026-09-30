@@ -157,14 +157,23 @@ static void DeterminePaths()
 	std::error_code ec;
 	const bool isFirstStart = !fs::exists(ActiveSettings::GetConfigPath("settings.xml"), ec);
 	NetworkConfig::LoadOnce();
-	if (isFirstStart)
-	{
-		// Documents/games is always scanned
-		GetConfig().game_paths.emplace_back(_pathToUtf8(ToPath(self.gamesURL)));
-		GetConfigHandle().Save();
-	}
-	else
+	if (!isFirstStart)
 		GetConfigHandle().Load();
+	// Documents/games is always scanned. The app container path can change when the app is reinstalled or
+	// updated, so drop games folders of previous containers
+	{
+		const std::string gamesPath = _pathToUtf8(ToPath(self.gamesURL));
+		auto& gamePaths = GetConfig().game_paths;
+		const size_t countBefore = gamePaths.size();
+		std::erase_if(gamePaths, [&](const std::string& path) {
+			return path != gamesPath && path.find("/Data/Application/") != std::string::npos && path.ends_with("/Documents/games");
+		});
+		const bool hasGamesPath = std::find(gamePaths.begin(), gamePaths.end(), gamesPath) != gamePaths.end();
+		if (!hasGamesPath)
+			gamePaths.insert(gamePaths.begin(), gamesPath);
+		if (isFirstStart || !hasGamesPath || gamePaths.size() != countBefore)
+			GetConfigHandle().Save();
+	}
 	// CoreAudio is the only audio backend on iPadOS. Persist it since CemuCommonInit() reloads settings.xml
 	if (GetConfig().audio_api != IAudioAPI::CoreAudio)
 	{
