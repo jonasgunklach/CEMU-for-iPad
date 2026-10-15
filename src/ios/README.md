@@ -62,6 +62,24 @@ prepare the pool. Cemu requests that using the `brk #0xf00d` protocol of StikDeb
 If enabling JIT crashes Cemu (for example because the debugger did not run the script on a TXM device), Cemu
 skips JIT on the next launch and falls back to the interpreter.
 
+## Testing in the Simulator
+
+The Simulator uses the `arm64-ios-simulator-cemu` triplet (install root `../vcpkg_installed_iossim`) and
+`-DCMAKE_OSX_SYSROOT=iphonesimulator`. The app has to be installed with `xcrun simctl install`. In the Simulator JIT
+works without a debugger.
+
+To start a game without tapping, pass its title ID:
+
+```sh
+xcrun simctl launch <device> info.cemu.Cemu.ios -CemuAutoLaunch 0005000011000000
+```
+
+Simulator apps can read the Mac's file system, so a game folder on the Mac can be added to `GamePaths` in the
+Simulator's `settings.xml` instead of being copied.
+
+The Simulator's GPU lacks cube-array textures, which Cemu's Metal renderer uses for all cube maps, so most games stop
+there. Use a real iPad or "My Mac (Designed for iPad)" in Xcode for anything beyond startup.
+
 ## Status / known limitations
 
 - Launching a second game requires restarting the app
